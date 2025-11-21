@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using dnlib.DotNet;
 using Duckov.Modding;
 using Duckov.Rules;
 using Duckov.UI;
@@ -30,6 +31,8 @@ namespace DisplayExtraInfo
         public bool showBossList = true;
         // 文字大小
         public float fontSize = 20f;
+        // 在什么物品显示Boss列表
+        public string bossListItemIDs = "389,1252";
         // 强制更新配置文件token
         public string configToken = "display_extra_info_v1";
     }
@@ -90,12 +93,14 @@ namespace DisplayExtraInfo
 
             ItemHoveringUI.onSetupItem += OnSetupItemHoveringUI;
             ItemHoveringUI.onSetupMeta += OnSetupMeta;
+            LevelManager.OnLevelInitialized += UpdateStorageCache;
         }
 
         void OnDisable()
         {
             ItemHoveringUI.onSetupItem -= OnSetupItemHoveringUI;
             ItemHoveringUI.onSetupMeta -= OnSetupMeta;
+            LevelManager.OnLevelInitialized -= UpdateStorageCache;
 
             ModManager.OnModActivated -= OnModActivated;
             ModConfigAPI.SafeRemoveOnOptionsChangedDelegate(OnModConfigOptionsChanged);
@@ -109,16 +114,6 @@ namespace DisplayExtraInfo
                 SetupModConfig();
                 LoadConfigFromModConfig();
             }
-        }
-        private bool IsChinese()
-        {
-            // 根据当前语言设置描述文字
-            SystemLanguage[] chineseLanguages = {
-                SystemLanguage.Chinese,
-                SystemLanguage.ChineseSimplified,
-                SystemLanguage.ChineseTraditional
-            };
-            return chineseLanguages.Contains(LocalizationManager.CurrentLanguage);
         }
 
         private void SetupModConfig()
@@ -137,13 +132,15 @@ namespace DisplayExtraInfo
             bool isChinese = IsChinese();
 
             // 不知道为啥, 添加的顺序和游戏里面看到的顺序反过来了
+            ModConfigAPI.SafeAddInputWithSlider(MOD_NAME, "bossListItemIDs", isChinese ? "显示Boss的物品ID (默认389,1252)" : "Boss List Item IDs (default 389,1252)", typeof(string), config.bossListItemIDs, null);
+
             ModConfigAPI.SafeAddInputWithSlider(MOD_NAME, "fontSize", isChinese ? "字体大小" : "Font Size", typeof(float), config.fontSize, new Vector2(10f, 40f));
 
-            ModConfigAPI.SafeAddBoolDropdownList(MOD_NAME, "showBossList",      isChinese ? "显示Boss列表"     : "Show Boss List",          config.showBossList);
-            ModConfigAPI.SafeAddBoolDropdownList(MOD_NAME, "showItemCount", isChinese ? "显示数量" : "Show Item Value", config.showItemCount);
-            ModConfigAPI.SafeAddBoolDropdownList(MOD_NAME, "showItemKgValue", isChinese ? "显示每Kg物品价值" : "Show Item Kg Value", config.showItemKgValue);
+            ModConfigAPI.SafeAddBoolDropdownList(MOD_NAME, "showBossList",      isChinese ? "显示Boss列表"     : "Show Boss List",       config.showBossList);
+            ModConfigAPI.SafeAddBoolDropdownList(MOD_NAME, "showItemCount",     isChinese ? "显示数量"         : "Show Item Value",      config.showItemCount);
+            ModConfigAPI.SafeAddBoolDropdownList(MOD_NAME, "showItemKgValue",   isChinese ? "显示每Kg物品价值" : "Show Item Kg Value",   config.showItemKgValue);
             ModConfigAPI.SafeAddBoolDropdownList(MOD_NAME, "showItemSlotValue", isChinese ? "显示每格物品价值" : "Show Item Slot Value", config.showItemSlotValue);
-            ModConfigAPI.SafeAddBoolDropdownList(MOD_NAME, "showItemValue", isChinese ? "显示物品价值" : "Show Item Value", config.showItemValue);
+            ModConfigAPI.SafeAddBoolDropdownList(MOD_NAME, "showItemValue",     isChinese ? "显示物品价值"     : "Show Item Value",      config.showItemValue);
 
             Debug.Log($"{MOD_NAME}: ModConfig setup completed");
         }
@@ -151,12 +148,13 @@ namespace DisplayExtraInfo
         private void LoadConfigFromModConfig()
         {
             // 使用新的 LoadConfig 方法读取所有配置
-            config.showItemValue     = ModConfigAPI.SafeLoad<bool> (MOD_NAME, "showItemValue",     config.showItemValue);
-            config.showItemSlotValue = ModConfigAPI.SafeLoad<bool> (MOD_NAME, "showItemSlotValue", config.showItemSlotValue);
-            config.showItemKgValue   = ModConfigAPI.SafeLoad<bool> (MOD_NAME, "showItemKgValue",   config.showItemKgValue);
-            config.showItemCount     = ModConfigAPI.SafeLoad<bool> (MOD_NAME, "showItemCount",     config.showItemCount);
-            config.showBossList      = ModConfigAPI.SafeLoad<bool> (MOD_NAME, "showBossList",      config.showBossList);
-            config.fontSize          = ModConfigAPI.SafeLoad<float>(MOD_NAME, "fontSize",          config.fontSize);
+            config.bossListItemIDs   = ModConfigAPI.SafeLoad<string>(MOD_NAME, "bossListItemIDs",   config.bossListItemIDs);
+            config.fontSize          = ModConfigAPI.SafeLoad<float> (MOD_NAME, "fontSize",          config.fontSize);
+            config.showBossList      = ModConfigAPI.SafeLoad<bool>  (MOD_NAME, "showBossList",      config.showBossList);
+            config.showItemCount     = ModConfigAPI.SafeLoad<bool>  (MOD_NAME, "showItemCount",     config.showItemCount);
+            config.showItemKgValue   = ModConfigAPI.SafeLoad<bool>  (MOD_NAME, "showItemKgValue",   config.showItemKgValue);
+            config.showItemSlotValue = ModConfigAPI.SafeLoad<bool>  (MOD_NAME, "showItemSlotValue", config.showItemSlotValue);
+            config.showItemValue     = ModConfigAPI.SafeLoad<bool>  (MOD_NAME, "showItemValue",     config.showItemValue);
         }
 
         private void OnModConfigOptionsChanged(string key)
@@ -194,7 +192,8 @@ namespace DisplayExtraInfo
         private void OnSetupMeta(ItemHoveringUI uiInstance, ItemMetaData data)
         {
             SetupText(uiInstance);
-            DisplayItemCount(data.id);
+            if (config.showItemCount)
+                DisplayItemCount(data.id);
         }
 
         private void OnSetupItemHoveringUI(ItemHoveringUI uiInstance, Item item)
@@ -206,13 +205,12 @@ namespace DisplayExtraInfo
             }
 
             SetupText(uiInstance);
-            DisplayItemValue(item);
-            DisplayItemCount(item.TypeID);
-            if (item.TypeID == 389 || item.TypeID == 1252) // 自动售货机神秘留言/橘子耳机
-            {
-                //DisplayDifficulty();
+            if (config.showItemValue)
+                DisplayItemValue(item);
+            if (config.showItemCount)
+                DisplayItemCount(item.TypeID);
+            if (config.showBossList && IsSpecialItem(item.TypeID))
                 DisplayBossList();
-            }
         }
 
         private void SetupText(ItemHoveringUI uiInstance)
@@ -226,8 +224,6 @@ namespace DisplayExtraInfo
 
         private void DisplayItemValue(Item item)
         {
-            if (!config.showItemValue)
-                return;
             if (Text.text.Length != 0)
                 Text.text += "\n";
             Text.text += $"${item.GetTotalRawValue() / 2}";
@@ -239,8 +235,6 @@ namespace DisplayExtraInfo
 
         private void DisplayItemCount(int type_id)
         {
-            if (!config.showItemCount)
-                return;
             if (Text.text.Length != 0)
                 Text.text += "\n";
             // 背包
@@ -270,7 +264,7 @@ namespace DisplayExtraInfo
                         count_buffer += e.StackCount;
 
             string backpack = "Backpack", storage = "Storage", buffer = "Buffer";
-            if (LocalizationManager.CurrentLanguage == SystemLanguage.ChineseSimplified)
+            if (IsChinese())
             {
                 backpack = "背包"; storage = "仓库"; buffer = "自提柜";
             }
@@ -310,28 +304,18 @@ namespace DisplayExtraInfo
             return count;
         }
 
-        /*private void DisplayDifficulty()
+        private void UpdateStorageCache()
         {
-            if (Text.text.Length != 0)
-                Text.text += "\n[\n";
-            var rules = GameRulesManager.Current;
-            Text.text += $"难度:\t\t\t{rules.DisplayName}\n";
-            Text.text += $"战争迷雾:\t\t\t{rules.FogOfWar}\n";
-            Text.text += $"对玩家伤害:\t\t{rules.DamageFactor_ToPlayer}\n";
-            Text.text += $"敌人血量:\t\t\t{rules.EnemyHealthFactor}\n";
-            Text.text += $"后坐力系数:\t\t{rules.RecoilMultiplier}\n";
-            Text.text += $"生成遗失物:\t\t{rules.SpawnDeadBody}\n";
-            Text.text += $"遗失物数量:\t\t{rules.SaveDeadbodyCount}\n";
-            Text.text += $"敌人反应时间:\t\t{rules.EnemyReactionTimeFactor}\n";
-            Text.text += $"敌人攻击间隔:\t\t{rules.EnemyAttackTimeSpaceFactor}\n";
-            Text.text += $"敌人攻击持续时间:\t{rules.EnemyAttackTimeFactor}\n";
-            Text.text += $"高级负面效果:\t\t{rules.AdvancedDebuffMode}";
-        }*/
+            if (PlayerStorage.Inventory == null)
+                return;
+            Debug.Log($"{MOD_NAME}: UpdateStorageCache");
+            storage_cache = new List<(int, int)>();
+            int type_id = 0;
+            CountInventory(PlayerStorage.Inventory, type_id, storage_cache);
+        }
 
         private void DisplayBossList()
         {
-            if (!config.showBossList)
-                return;
             if (Text.text.Length != 0)
                 Text.text += "\n";
             Text.text += "Boss:";
@@ -352,6 +336,31 @@ namespace DisplayExtraInfo
                     if (preset.characterIconType == CharacterIconTypes.boss || preset.name == "EnemyPreset_BossMelee_SchoolBully")
                         Text.text += $"\n\t{preset.DisplayName}";
                 }
+            }
+        }
+        
+        private bool IsChinese()
+        {
+            // 根据当前语言设置描述文字
+            SystemLanguage[] chineseLanguages = {
+                SystemLanguage.Chinese,
+                SystemLanguage.ChineseSimplified,
+                SystemLanguage.ChineseTraditional
+            };
+            return chineseLanguages.Contains(LocalizationManager.CurrentLanguage);
+        }
+
+        private bool IsSpecialItem(int type_id)
+        {
+            try
+            {
+                var ids = new List<int>(Array.ConvertAll(config.bossListItemIDs.Split(","), int.Parse));
+                return ids.Contains(type_id);
+            }
+            catch
+            {
+                Debug.LogError($"{MOD_NAME}: invalid bossListItemIDs: {config.bossListItemIDs}, use default 389,1252");
+                return type_id == 389 || type_id == 1252; // 自动售货机神秘留言/橘子耳机
             }
         }
     }
