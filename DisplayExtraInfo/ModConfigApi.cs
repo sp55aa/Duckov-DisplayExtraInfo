@@ -4,7 +4,8 @@ using System.Reflection;
 using UnityEngine;
 
 //替换为你的mod命名空间, 防止多个同名ModConfigAPI冲突
-namespace ReplaceThisWithYourModNameSpace { 
+namespace DisplayExtraInfo
+{ 
 /// <summary>
 /// ModConfig 安全接口封装类 - 提供不抛异常的静态接口
 /// ModConfig Safe API Wrapper Class - Provides non-throwing static interfaces
