@@ -6,3 +6,7 @@
 4. 显示物品在背包/仓库/自提点的总数
 5. 武器槽/针包/钥匙包/手提袋内的物品也会统计在内 (目前常见的那个没算在内, 整理武器配件不方便)
 6. 显示当前地图刷新了哪些boss. 目前可以在2个物品上查看: 橘子耳机/售货机神秘留言 (目前能找到的mod会显示敌人实时位置, 感觉有点影响平衡)
+
+物品价值参考了https://github.com/xvrsl/duckov_modding
+物品数量参考了https://github.com/Haosonn/DuckovShowInventoryCount
+boss列表参考了https://github.com/RunningBugs/EscapeFromDuckovMods的BossLiveMapMod
