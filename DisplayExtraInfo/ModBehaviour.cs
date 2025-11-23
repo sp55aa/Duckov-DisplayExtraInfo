@@ -332,7 +332,7 @@ namespace DisplayExtraInfo
                     var preset = character.characterPreset;
                     if (preset == null)
                         continue;
-                    //Debug.Log($"{MOD_NAME}: icon: {preset.characterIconType}, name: {preset.name}, DisplayName: {preset.DisplayName}");
+                    //Debug.Log($"{MOD_NAME}: icon: {preset.characterIconType}, name: {preset.name}, DisplayName: {preset.DisplayName}, damageMultiplier: {preset.damageMultiplier}");
                     if (preset.characterIconType == CharacterIconTypes.boss || preset.name == "EnemyPreset_BossMelee_SchoolBully")
                         Text.text += $"\n\t{preset.DisplayName}";
                 }
