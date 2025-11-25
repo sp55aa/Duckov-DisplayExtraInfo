@@ -19,29 +19,29 @@
     </PropertyGroup>
     <ItemGroup>
         <Reference Include="$(DuckovPath)$(SubPath)TeamSoda.*">
-	      <Private>False</Private>
-	    </Reference>
+            <Private>False</Private>
+        </Reference>
         <Reference Include="$(DuckovPath)$(SubPath)ItemStatsSystem.dll">
-	      <Private>False</Private>
-	    </Reference>
+            <Private>False</Private>
+        </Reference>
         <Reference Include="$(DuckovPath)$(SubPath)Unity*">
-	      <Private>False</Private>
-	    </Reference>
+            <Private>False</Private>
+        </Reference>
         <Reference Include="$(DuckovPath)$(SubPath)SodaLocalization.dll">
-	      <Private>False</Private>
-	    </Reference>
+            <Private>False</Private>
+        </Reference>
         <Reference Include="dnlib">
-          <HintPath>dnlib.dll</HintPath>
-        </Reference>
-        <Reference Include="Publicizer">
-          <HintPath>Publicizer.dll</HintPath>
-        </Reference>
+        <HintPath>dnlib.dll</HintPath>
+    </Reference>
+    <Reference Include="Publicizer">
+    <HintPath>Publicizer.dll</HintPath>
+</Reference>
     </ItemGroup>
-	<ItemGroup>
-		<PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="all" />
-	</ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Krafs.Publicizer" Version="2.3.0" PrivateAssets="all" />
+    </ItemGroup>
     <ItemGroup>
         <Publicize Include="TeamSoda.Duckov.Core:CharacterSpawnerRoot.createdCharacters" />
-		<Publicize Include="TeamSoda.Duckov.Core:CharacterRandomPreset.characterIconType" />
+        <Publicize Include="TeamSoda.Duckov.Core:CharacterRandomPreset.characterIconType" />
     </ItemGroup>
 </Project>
